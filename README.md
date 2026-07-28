@@ -30,7 +30,7 @@ dans le bon ordre et dans la bonne version, à partir d'un unique `docker-compos
 | Résultats | Base PostgreSQL de restitution + API de consultation |
 | Stockage | MinIO (compatible S3) |
 
-Mécanismes intéressants à noter :
+Mécanismes intéressants à noter:
 
 - Un conteneur d'initialisation dédié (`initdb_adduser`) crée la base et
   l'utilisateur Airflow avant que les autres services ne démarrent.
