@@ -1,3 +1,53 @@
+> ### ℹ️ Travail d'apprentissage — code d'accompagnement d'un ouvrage
+>
+> Ce dépôt reprend le code du **chapitre 14 du livre
+> [*Data Pipelines with Apache Airflow*](https://www.manning.com/books/data-pipelines-with-apache-airflow)**
+> (Bas Harenslak & Julian de Ruiter, Manning). Le code d'origine appartient à ses auteurs.
+>
+> Je le conserve et l'annote comme support d'étude sur l'orchestration Airflow d'une
+> architecture multi-services conteneurisée. Le README d'origine suit ci-dessous.
+>
+> — Franklin KANA NGUEDIA
+
+---
+
+## Ce que fait ce projet
+
+Croiser les données de **taxis jaunes new-yorkais** et de **vélos partagés Citi Bike**
+pour déterminer, entre deux quartiers et à une heure donnée, quel mode de transport
+est le plus rapide. Un cas d'usage typique d'aide à la décision pour l'aménagement et
+l'exploitation d'une ville.
+
+## Ce que Docker apporte ici
+
+C'est l'intérêt principal de ce chapitre : **sept services** démarrent ensemble,
+dans le bon ordre et dans la bonne version, à partir d'un unique `docker-compose.yml`.
+
+| Brique | Services |
+|---|---|
+| Orchestration | Airflow (image custom via `ARG AIRFLOW_BASE_IMAGE`) + PostgreSQL de métadonnées |
+| Sources simulées | API Citi Bike, file server Taxi, chacun avec sa propre base PostgreSQL |
+| Résultats | Base PostgreSQL de restitution + API de consultation |
+| Stockage | MinIO (compatible S3) |
+
+Mécanismes intéressants à noter :
+
+- Un conteneur d'initialisation dédié (`initdb_adduser`) crée la base et
+  l'utilisateur Airflow avant que les autres services ne démarrent.
+- Les **ancres YAML** (`&airflow_environment`) factorisent la configuration commune
+  entre tous les services Airflow — un seul endroit à modifier.
+- Le code source est monté en bind-mount et réinstallé en mode éditable
+  (`pip install -e`) au démarrage : le développement se fait sans reconstruire l'image.
+
+Le bénéfice concret : un nouvel arrivant lance `docker-compose up -d` et dispose d'un
+environnement complet en quelques minutes, là où l'installation manuelle de sept
+composants prendrait plusieurs jours.
+
+> ⚠️ Les identifiants visibles dans ce dépôt (bases de données, clés MinIO, clé Fernet)
+> sont des valeurs d'exemple issues du livre, destinées à un usage local uniquement.
+
+---
+
 # Chapter 14
 
 Code accompanying Chapter 14 of the book [Data Pipelines with Apache Airflow](https://www.manning.com/books/data-pipelines-with-apache-airflow).
