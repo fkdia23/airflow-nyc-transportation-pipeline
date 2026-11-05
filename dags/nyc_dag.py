@@ -104,7 +104,7 @@ def get_minio_object(
 def transform_citi_bike_data(df):
     # Map citi bike lat,lon coordinates to taxi zone ids
     taxi_zones = geopandas.read_file(
-        "https://s3.amazonaws.com/nyc-tlc/misc/taxi_zones.zip"
+        "zip+https://d37ci6vzurychx.cloudfront.net/misc/taxi_zones.zip!taxi_zones/taxi_zones.shp"
     ).to_crs("EPSG:4326")
     start_gdf = geopandas.GeoDataFrame(
         df,

@@ -1,23 +1,16 @@
-FROM python:3.11-slim
+FROM postgres:13
 
-# Install dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+# docker-compose.yml ne fournit pas de mot de passe pour ce service
+ENV POSTGRES_HOST_AUTH_METHOD=trust
 
-# Install DuckDB Python package
-RUN pip install --no-cache-dir duckdb
+# DuckDB convertit les Parquet en CSV. Il est installe dans un environnement
+# virtuel, car l'image Debian refuse pip au niveau systeme (PEP 668).
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates python3 python3-venv wget && \
+    rm -rf /var/lib/apt/lists/* && \
+    python3 -m venv /opt/duckdb && \
+    /opt/duckdb/bin/pip install --no-cache-dir duckdb==2.0.0
 
-# Create directories for DuckDB database
-RUN mkdir -p /var/lib/duckdb /data
-
-# Copy initialization script and entrypoint
+# Docker l'execute automatiquement au premier demarrage du conteneur
 COPY postgres-init.sh /docker-entrypoint-initdb.d/postgres-init.sh
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /docker-entrypoint-initdb.d/postgres-init.sh /entrypoint.sh
-
-ENTRYPOINT ["/entrypoint.sh"]
-
-# Default command
-CMD ["sleep", "infinity"]
+RUN chmod +x /docker-entrypoint-initdb.d/postgres-init.sh

@@ -15,6 +15,6 @@ for i in $(seq 0 3); do
   -d ${POSTGRES_DATABASE} \
   -U ${POSTGRES_USERNAME} \
   <<-EOSQL
-  \copy (SELECT pickup_datetime + INTERVAL '${year_offset} YEARS' AS pickup_datetime, dropoff_datetime + INTERVAL '${year_offset} YEARS' AS dropoff_datetime, pickup_locationid, dropoff_locationid, trip_distance FROM triprecords WHERE dropoff_datetime + interval '${year_offset} YEARS' <= to_timestamp(${floor_quarter}) - interval '$((${i} * 15)) minutes' AND dropoff_datetime + interval '${year_offset} YEARS' >= NOW() - interval '($(((${i} + 1) * 15)) minutes') TO '/data/${output_filename}' WITH CSV HEADER;
+  \copy (SELECT pickup_datetime + INTERVAL '${year_offset} YEARS' AS pickup_datetime, dropoff_datetime + INTERVAL '${year_offset} YEARS' AS dropoff_datetime, pickup_locationid, dropoff_locationid, trip_distance FROM triprecords WHERE dropoff_datetime + interval '${year_offset} YEARS' <= to_timestamp(${floor_quarter}) - interval '$((${i} * 15)) minutes' AND dropoff_datetime + interval '${year_offset} YEARS' >= NOW() - interval '$(((${i} + 1) * 15)) minutes') TO '/data/${output_filename}' WITH CSV HEADER;
 EOSQL
 done

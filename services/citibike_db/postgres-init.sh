@@ -25,41 +25,28 @@ psql -v ON_ERROR_STOP=1 citibike <<-EOSQL
 EOSQL
 
 # Load data
-urls="
-https://s3.amazonaws.com/tripdata/JC-201901-citibike-tripdata.csv.zip
-https://s3.amazonaws.com/tripdata/JC-201902-citibike-tripdata.csv.zip
-https://s3.amazonaws.com/tripdata/JC-201903-citibike-tripdata.csv.zip
-https://s3.amazonaws.com/tripdata/JC-201904-citibike-tripdata.csv.zip
-https://s3.amazonaws.com/tripdata/JC-201905-citibike-tripdata.csv.zip
-https://s3.amazonaws.com/tripdata/JC-201906-citibike-tripdata.csv.zip
-https://s3.amazonaws.com/tripdata/JC-201907-citibike-tripdata.csv.zip
-https://s3.amazonaws.com/tripdata/JC-201908-citibike-tripdata.csv.zip
-https://s3.amazonaws.com/tripdata/JC-201909-citibike-tripdata.csv.zip
-https://s3.amazonaws.com/tripdata/JC-201910-citibike-tripdata.csv.zip
-https://s3.amazonaws.com/tripdata/JC-201911-citibike-tripdata.csv.zip
-https://s3.amazonaws.com/tripdata/JC-201912-citibike-tripdata.csv.zip
-"
+# New York rides are now only published as one yearly archive of monthly CSV files.
+# The JC-* files cover Jersey City, which lies outside the NYC taxi zones.
+archive=/tmp/citibike-tripdata.zip
+wget -q https://s3.amazonaws.com/tripdata/2019-citibike-tripdata.zip -O "${archive}"
 
-for url in ${urls}; do
-  wget "${url}" -O /tmp/citibike-tripdata.csv.zip
-  unzip -o /tmp/citibike-tripdata.csv.zip -d /tmp
-
-  # Filename of unzipped CSV matches the zip name without .zip
-  filename=$(echo "${url}" | sed 's:.*/::' | sed 's/\.zip$//')
-
+for filename in $(unzip -Z1 "${archive}" | grep -E '^2019-citibike-tripdata/.*\.csv$'); do
   # Keep header + every 8th line, extract first 11 columns, exclude NULLs
-  # (reduces image size: full data ~4.18GB → ~890MB)
-  time awk -F',' 'NR == 1 || NR % 8 == 0 {print $1","$2","$3","$4","$5","$6","$7","$8","$9","$10","$11}' \
-    "/tmp/${filename}" | grep -v "NULL" > /tmp/citibike-tripdata.csv
+  # NF == 15 drops the rare lines with a comma inside a quoted value
+  # Some months write station ids as floats (3507.0), which COPY rejects for INTEGER
+  unzip -p "${archive}" "${filename}" \
+    | awk -F',' 'NF == 15 && (NR == 1 || NR % 8 == 0) {sub(/\.0$/, "", $4); sub(/\.0$/, "", $8); print $1","$2","$3","$4","$5","$6","$7","$8","$9","$10","$11}' \
+    | grep -v "NULL" > /tmp/citibike-tripdata.csv
 
-  time psql -v ON_ERROR_STOP=1 citibike <<-EOSQL
+  psql -v ON_ERROR_STOP=1 citibike <<-EOSQL
     COPY tripdata
     FROM '/tmp/citibike-tripdata.csv' DELIMITER ',' CSV HEADER;
 EOSQL
 
-  # Cleanup temp files to keep image size small
-  rm -f /tmp/citibike-tripdata.csv.zip "/tmp/${filename}" /tmp/citibike-tripdata.csv
+  rm -f /tmp/citibike-tripdata.csv
 done
+
+rm -f "${archive}"
 
 # Create user and grant privileges
 # FIX: split into two psql calls — \c does not work inside a heredoc
